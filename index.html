@@ -2,9 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>engineerdle</title>
+    <meta name="theme-color" content="#0B2A4A" />
+
+    <!-- ================================================================
+         REPLACE every instance of https://engineerdle.vercel.app below
+         with your own live URL. These must be absolute (full https://)
+         addresses — relative paths will not work for link previews.
+         ================================================================ -->
+
+    <!-- Browser tab + Google search result headline -->
+    <title>Engineerdle — the daily engineering puzzle</title>
+
+    <!-- Grey summary line under the headline in Google results -->
+    <meta
+      name="description"
+      content="One engineering concept a day. Five clues, five guesses. Laws, theories, equations and phenomena from every discipline."
+    />
+
+    <!-- Canonical URL: tells search engines which address is authoritative -->
+    <link rel="canonical" href="https://engineerdle.vercel.app/" />
+
+    <!-- Open Graph: builds the preview card in WhatsApp, LinkedIn, Slack,
+         iMessage, Discord, Facebook and most other apps -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Engineerdle" />
+    <meta property="og:title" content="Engineerdle — the daily engineering puzzle" />
+    <meta
+      property="og:description"
+      content="One engineering concept a day. Five clues, five guesses."
+    />
+    <meta property="og:url" content="https://engineerdle.vercel.app/" />
+    <meta property="og:image" content="https://engineerdle.vercel.app/preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Engineerdle: one engineering concept a day, five clues, five guesses." />
+
+    <!-- X / Twitter uses its own tag names for the same job -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Engineerdle — the daily engineering puzzle" />
+    <meta
+      name="twitter:description"
+      content="One engineering concept a day. Five clues, five guesses."
+    />
+    <meta name="twitter:image" content="https://engineerdle.vercel.app/preview.png" />
+
+    <!-- Tab icon and iOS home-screen icon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/preview.png" />
+
+    <!-- Fonts: preconnect shaves a little latency off first paint -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
     <div id="root"></div>

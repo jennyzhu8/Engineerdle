@@ -5,13 +5,20 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
    100 puzzles. One per day. Wrong guess or skip unlocks a clue.
    ============================================================ */
 
+
+/* ---- Browser storage shim ----
+   In a normal website we use localStorage. The API below mirrors the shape
+   the game expects: get() throws when a key is missing, set() resolves. ---- */
 const store = {
-  get: async (k) => {
-    const v = localStorage.getItem(k);
-    if (v === null) throw new Error("not found");
-    return { key: k, value: v };
+  get: async (key) => {
+    const value = localStorage.getItem(key);
+    if (value === null) throw new Error("not found: " + key);
+    return { key, value };
   },
-  set: async (k, v) => { localStorage.setItem(k, v); return { key: k, value: v }; },
+  set: async (key, value) => {
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
 };
 
 const MAX_GUESSES = 5;
@@ -210,6 +217,7 @@ export default function Engineerdle() {
   const [toast, setToast] = useState("");
   const [copied, setCopied] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [showSug, setShowSug] = useState(true);
   const [highlight, setHighlight] = useState(-1);
   const toastRef = useRef(null);
   const inputRef = useRef(null);
@@ -288,6 +296,7 @@ export default function Engineerdle() {
     setGuesses(next);
     setInput("");
     setHighlight(-1);
+    setShowSug(true);
     setStatus(st);
     persist(next, st);
     if (correct) { flash("Correct — nice call.", 2400); recordStats(true); }
@@ -397,19 +406,20 @@ export default function Engineerdle() {
                 style={S.input}
                 value={input}
                 placeholder="Name the concept, law or equation…"
-                onChange={(e) => { setInput(e.target.value); setHighlight(-1); }}
+                onChange={(e) => { setInput(e.target.value); setHighlight(-1); setShowSug(true); }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 140)}
                 onKeyDown={(e) => {
-                  if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, suggestions.length - 1)); }
+                  if (e.key === "ArrowDown") { e.preventDefault(); setShowSug(true); setHighlight((h) => Math.min(h + 1, suggestions.length - 1)); }
                   else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, -1)); }
-                  else if (e.key === "Escape") { setHighlight(-1); setFocused(false); }
+                  else if (e.key === "Escape") { setHighlight(-1); setShowSug(false); }
                   else if (e.key === "Enter") {
                     e.preventDefault();
-                    if (highlight >= 0 && suggestions[highlight]) {
-                      // Fill the box; the player presses Enter again to submit.
+                    if (showSug && highlight >= 0 && suggestions[highlight]) {
+                      // Fill the box and close the list; press Enter again to submit.
                       setInput(suggestions[highlight]);
                       setHighlight(-1);
+                      setShowSug(false);
                     } else {
                       commit(input);
                     }
@@ -418,7 +428,7 @@ export default function Engineerdle() {
                 autoComplete="off"
                 aria-label="Your guess"
               />
-              {focused && suggestions.length > 0 && (
+              {focused && showSug && suggestions.length > 0 && (
                 <div style={S.sugBox}>
                   {suggestions.map((s, i) => (
                     <div
@@ -430,6 +440,7 @@ export default function Engineerdle() {
                         e.preventDefault();
                         setInput(s);          // fill only — do not submit
                         setHighlight(-1);
+                        setShowSug(false);    // close the list so it stops covering the buttons
                         if (inputRef.current) inputRef.current.focus();
                       }}
                       style={{ ...S.sug, background: i === highlight ? "#173C60" : "transparent" }}
