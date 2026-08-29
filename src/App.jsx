@@ -517,6 +517,8 @@ export default function Engineerdle() {
         )}
       </div>
 
+      <AdSlot slot="2246291868" />
+
       {toast && <div key={toast} style={S.toast}>{toast}</div>}
 
       {showHelp && (
@@ -543,6 +545,24 @@ export default function Engineerdle() {
   );
 }
 
+function AdSlot({ slot }) {
+  const pushed = useRef(false);
+  useEffect(() => {
+    if (pushed.current) return;
+    pushed.current = true;
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* ignore */ }
+  }, []);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: "block", margin: "20px 0" }}
+      data-ad-client="ca-pub-8271928500002157"
+      data-ad-slot={slot}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    />
+  );
+}
 function Meta({ k, v }) {
   return (
     <div style={S.metaCell}>
