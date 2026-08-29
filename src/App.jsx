@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { track } from "@vercel/analytics";
 
 /* ============================================================
    ENGINEER·DLE — daily progressive-clue engineering puzzle.
@@ -299,9 +300,17 @@ export default function Engineerdle() {
     setShowSug(true);
     setStatus(st);
     persist(next, st);
-    if (correct) { flash("Correct — nice call.", 2400); recordStats(true); }
-    else if (done) { recordStats(false); }
-    else { flash(isSkip ? `Skipped. Clue ${next.length + 1} unlocked.` : `Not it. Clue ${next.length + 1} unlocked.`); }
+    if (correct) {
+      flash("Correct — nice call.", 2400);
+      recordStats(true);
+      track("game_won", { puzzle: puzzle.number, discipline: puzzle.discipline, attempts: next.length });
+    } else if (done) {
+      recordStats(false);
+      track("game_lost", { puzzle: puzzle.number, discipline: puzzle.discipline });
+    } else {
+      flash(isSkip ? `Skipped. Clue ${next.length + 1} unlocked.` : `Not it. Clue ${next.length + 1} unlocked.`);
+      if (isSkip) track("skip_used", { puzzle: puzzle.number, clue: next.length + 1 });
+    }
   };
 
   const cluesShown = Math.min(guesses.length + 1, MAX_GUESSES);
@@ -316,6 +325,7 @@ export default function Engineerdle() {
   };
 
   const share = async () => {
+    track("share_clicked", { puzzle: puzzle.number, status });
     try {
       await navigator.clipboard.writeText(shareText());
       setCopied(true);
