@@ -576,6 +576,7 @@ export default function Engineerdle() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
         *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:#0B2A4A}
         input,button{font-family:inherit}
         .ed-btn:focus-visible,.ed-in:focus-visible,.ed-sug:focus-visible{outline:2px solid #4CC9F0;outline-offset:2px}
         .ed-in:focus{border-color:#4CC9F0 !important}
