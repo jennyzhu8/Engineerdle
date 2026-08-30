@@ -404,7 +404,7 @@ function dayNumber(d = new Date()) {
 }
 function todaysPuzzle() {
   const n = dayNumber();
-  const i = ((n % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
+  const i = (((n - 1) % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
   return { ...PUZZLES[i], number: n };
 }
 
