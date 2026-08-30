@@ -398,7 +398,7 @@ function dateKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 function dayNumber(d = new Date()) {
-  const epoch = new Date(2024, 0, 1).getTime();
+  const epoch = new Date(2026, 7, 28).getTime();
   const today = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   return Math.floor((today - epoch) / 86400000) + 1;
 }
