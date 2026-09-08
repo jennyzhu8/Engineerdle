@@ -558,7 +558,7 @@ export default function Engineerdle() {
     const squares = guesses.map((g) => (g.correct ? "🟩" : g.text === SKIP ? "⬜" : "🟥")).join("");
     const pad = "⬛".repeat(Math.max(0, MAX_GUESSES - guesses.length));
     const score = status === "won" ? `${guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
-    return `ENGINEER·DLE #${puzzle.number} — ${puzzle.discipline}\n${score}\n${squares}${pad}`;
+    return `ENGINEER·DLE #${puzzle.number} — ${puzzle.discipline}\n${score}\n${squares}${pad}\nhttps://engineerdle.vercel.app`;
   };
 
   const share = async () => {
