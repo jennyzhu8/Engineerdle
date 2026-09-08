@@ -402,10 +402,20 @@ function dayNumber(d = new Date()) {
   const today = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   return Math.floor((today - epoch) / 86400000) + 1;
 }
-function todaysPuzzle() {
-  const n = dayNumber();
+function puzzleForNumber(n) {
   const i = (((n - 1) % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
   return { ...PUZZLES[i], number: n };
+}
+function todaysPuzzle() {
+  return puzzleForNumber(dayNumber());
+}
+function dateForDayNumber(n) {
+  const epoch = new Date(2026, 7, 28);
+  const d = new Date(epoch.getFullYear(), epoch.getMonth(), epoch.getDate() + (n - 1));
+  return d;
+}
+function shortDate(d) {
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 /* ---------- Answer matching ---------- */
@@ -442,8 +452,11 @@ const ALL_TERMS = PUZZLES.map((p) => p.answer).sort((a, b) => a.localeCompare(b)
 const SKIP = "__skip__";
 
 export default function Engineerdle() {
-  const puzzle = useRef(todaysPuzzle()).current;
+  const todayNumber = useRef(dayNumber()).current;
   const today = dateKey();
+  const [activeNumber, setActiveNumber] = useState(todayNumber);
+  const puzzle = useMemo(() => puzzleForNumber(activeNumber), [activeNumber]);
+  const isToday = activeNumber === todayNumber;
 
   const [guesses, setGuesses] = useState([]);
   const [input, setInput] = useState("");
@@ -452,6 +465,8 @@ export default function Engineerdle() {
   const [stats, setStats] = useState({ played: 0, wins: 0, streak: 0, maxStreak: 0, lastPlayed: "" });
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const [archive, setArchive] = useState({});
   const [toast, setToast] = useState("");
   const [copied, setCopied] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -466,32 +481,69 @@ export default function Engineerdle() {
     toastRef.current = setTimeout(() => setToast(""), ms);
   };
 
+  // Loads saved progress whenever the active puzzle changes (today, or an archive pick).
+  // Falls back to the old date-keyed save for today's puzzle, from before progress was
+  // keyed by puzzle number, and migrates it forward.
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      let raw = null;
+      try {
+        raw = (await store.get(`edle3:progress:${puzzle.number}`)).value;
+      } catch (e) {
+        if (isToday) {
+          try {
+            raw = (await store.get(`edle3:progress:${today}`)).value;
+            store.set(`edle3:progress:${puzzle.number}`, raw).catch(() => {});
+          } catch (e2) { /* no saved progress */ }
+        }
+      }
+      if (dead) return;
+      if (raw) {
+        const v = JSON.parse(raw);
+        setGuesses(v.guesses || []);
+        setStatus(v.status || "playing");
+      } else {
+        setGuesses([]);
+        setStatus("playing");
+      }
+      setLoaded(true);
+    })();
+    return () => { dead = true; };
+  }, [puzzle.number, isToday, today]);
+
   useEffect(() => {
     let dead = false;
     (async () => {
       try {
-        const p = await store.get(`edle3:progress:${today}`);
-        if (!dead && p && p.value) {
-          const v = JSON.parse(p.value);
-          setGuesses(v.guesses || []);
-          setStatus(v.status || "playing");
-        }
-      } catch (e) { /* first play today */ }
-      try {
         const s = await store.get("edle3:stats");
         if (!dead && s && s.value) setStats(JSON.parse(s.value));
       } catch (e) { /* no stats yet */ }
-      if (!dead) setLoaded(true);
     })();
     return () => { dead = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!showArchive) return;
+    let dead = false;
+    (async () => {
+      const days = Array.from({ length: todayNumber }, (_, i) => todayNumber - i);
+      const entries = await Promise.all(days.map(async (n) => {
+        try {
+          const r = await store.get(`edle3:progress:${n}`);
+          return [n, JSON.parse(r.value).status];
+        } catch (e) { return [n, null]; }
+      }));
+      if (!dead) setArchive(Object.fromEntries(entries));
+    })();
+    return () => { dead = true; };
+  }, [showArchive, todayNumber]);
 
   const persist = useCallback(async (g, st) => {
     try {
-      await store.set(`edle3:progress:${today}`, JSON.stringify({ guesses: g, status: st }));
+      await store.set(`edle3:progress:${puzzle.number}`, JSON.stringify({ guesses: g, status: st }));
     } catch (e) { /* ignore */ }
-  }, [today]);
+  }, [puzzle.number]);
 
   const recordStats = useCallback((won) => {
     setStats((prev) => {
@@ -537,13 +589,14 @@ export default function Engineerdle() {
     setShowSug(true);
     setStatus(st);
     persist(next, st);
+    if (done) setArchive((prev) => ({ ...prev, [puzzle.number]: st }));
     if (correct) {
       flash("Correct — nice call.", 2400);
-      recordStats(true);
-      track("game_won", { puzzle: puzzle.number, discipline: puzzle.discipline, attempts: next.length });
+      if (isToday) recordStats(true);
+      track("game_won", { puzzle: puzzle.number, discipline: puzzle.discipline, attempts: next.length, archive: !isToday });
     } else if (done) {
-      recordStats(false);
-      track("game_lost", { puzzle: puzzle.number, discipline: puzzle.discipline });
+      if (isToday) recordStats(false);
+      track("game_lost", { puzzle: puzzle.number, discipline: puzzle.discipline, archive: !isToday });
     } else {
       flash(isSkip ? `Skipped. Clue ${next.length + 1} unlocked.` : `Not it. Clue ${next.length + 1} unlocked.`);
       if (isSkip) track("skip_used", { puzzle: puzzle.number, clue: next.length + 1 });
@@ -571,6 +624,14 @@ export default function Engineerdle() {
     } catch (e) { flash("Copy blocked — select the text manually"); }
   };
 
+  const openPuzzle = (n) => {
+    setActiveNumber(n);
+    setShowArchive(false);
+    setInput("");
+    setHighlight(-1);
+    setShowSug(true);
+  };
+
   return (
     <div style={S.page}>
       <style>{`
@@ -582,6 +643,7 @@ export default function Engineerdle() {
         .ed-in:focus{border-color:#4CC9F0 !important}
         .ed-sug:hover{background:#173C60 !important}
         .ed-learn:hover{background:#173C60 !important;border-color:#4CC9F0 !important;color:#EAF2FA !important}
+        .ed-archive-row:hover{background:#173C60 !important}
         @keyframes edIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
         @keyframes edToast{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
         .ed-anim{animation:edIn .28s ease both}
@@ -593,14 +655,22 @@ export default function Engineerdle() {
       <div style={S.frame}>
         <header style={S.header}>
           <div>
-            <div style={S.eyebrow}>DAILY ENGINEERING PUZZLE · No. {puzzle.number}</div>
+            <div style={S.eyebrow}>{isToday ? "DAILY ENGINEERING PUZZLE" : "ARCHIVE PUZZLE"} · No. {puzzle.number}</div>
             <div style={S.title}>ENGINEER·DLE</div>
           </div>
           <div style={S.iconRow}>
+            <IconBtn label="Puzzle archive" onClick={() => setShowArchive(true)}><ArchiveIcon /></IconBtn>
             <IconBtn label="How to play" onClick={() => setShowHelp(true)}>?</IconBtn>
-            <IconBtn label="Statistics" onClick={() => setShowStats(true)}>▤</IconBtn>
+            <IconBtn label="Statistics" onClick={() => setShowStats(true)}><StatsIcon /></IconBtn>
           </div>
         </header>
+
+        {!isToday && (
+          <div style={S.archiveBanner}>
+            <span>Viewing {shortDate(dateForDayNumber(puzzle.number))} — this play doesn't affect your streak.</span>
+            <button className="ed-btn" style={S.archiveBackBtn} onClick={() => openPuzzle(todayNumber)}>BACK TO TODAY</button>
+          </div>
+        )}
 
         <div style={S.meta}>
           <Meta k="DISCIPLINE" v={puzzle.discipline} />
@@ -740,8 +810,13 @@ export default function Engineerdle() {
               </div>
             </div>
 
-            <button className="ed-btn" style={S.primaryBtn} onClick={share}>{copied ? "COPIED ✓" : "SHARE RESULT"}</button>
-            <div style={S.next}>New puzzle at midnight, your local time.</div>
+            <div style={S.btnRow}>
+              <button className="ed-btn" style={S.primaryBtn} onClick={share}>{copied ? "COPIED ✓" : "SHARE RESULT"}</button>
+              {!isToday && (
+                <button className="ed-btn" style={S.ghostBtn} onClick={() => setShowArchive(true)}>MORE PUZZLES</button>
+              )}
+            </div>
+            {isToday && <div style={S.next}>New puzzle at midnight, your local time.</div>}
           </div>
         )}
       </div>
@@ -749,6 +824,35 @@ export default function Engineerdle() {
       <AdSlot slot="2246291868" />
 
       {toast && <div key={toast} style={S.toast}>{toast}</div>}
+
+      {showArchive && (
+        <Modal title="PUZZLE ARCHIVE" onClose={() => setShowArchive(false)}>
+          <div style={S.archiveList}>
+            {Array.from({ length: todayNumber }, (_, i) => todayNumber - i).map((n) => {
+              const st = archive[n];
+              const isActive = n === activeNumber;
+              return (
+                <button
+                  key={n}
+                  className="ed-btn ed-archive-row"
+                  onClick={() => openPuzzle(n)}
+                  style={{
+                    ...S.archiveRow,
+                    borderColor: isActive ? C.accent : st === "won" ? C.correct : st === "lost" ? C.wrong : C.border,
+                    background: st === "won" ? "rgba(95,180,137,.08)" : st === "lost" ? "rgba(226,121,90,.06)" : "transparent",
+                  }}
+                >
+                  <span style={S.archiveNum}>#{n}</span>
+                  <span style={S.archiveDate}>{shortDate(dateForDayNumber(n))}</span>
+                  <span style={{ ...S.archiveStatus, color: st === "won" ? C.correct : st === "lost" ? C.wrong : C.muted }}>
+                    {st === "won" ? "✓ SOLVED" : st === "lost" ? "✕ MISSED" : n === todayNumber ? "TODAY" : "UNPLAYED"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Modal>
+      )}
 
       {showHelp && (
         <Modal title="HOW TO PLAY" onClose={() => setShowHelp(false)}>
@@ -803,6 +907,26 @@ function Meta({ k, v }) {
 function IconBtn({ children, onClick, label }) {
   return <button className="ed-btn" aria-label={label} onClick={onClick} style={S.iconBtn}>{children}</button>;
 }
+const iconProps = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+function ArchiveIcon() {
+  return (
+    <svg {...iconProps}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <line x1="16" y1="3" x2="16" y2="7" />
+      <line x1="8" y1="3" x2="8" y2="7" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+function StatsIcon() {
+  return (
+    <svg {...iconProps}>
+      <line x1="4" y1="20" x2="4" y2="11" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="20" y1="20" x2="20" y2="15" />
+    </svg>
+  );
+}
 function Stat({ v, l }) {
   return (
     <div style={S.statCell}>
@@ -838,7 +962,7 @@ const S = {
   eyebrow: { fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: ".14em", color: C.accent },
   title: { fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 26, marginTop: 2 },
   iconRow: { display: "flex", gap: 6 },
-  iconBtn: { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.border}`, background: "transparent", color: C.ink, fontSize: 13, cursor: "pointer" },
+  iconBtn: { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.border}`, background: "transparent", color: C.ink, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   meta: { display: "flex", gap: 16, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "8px 0" },
   metaCell: { flex: 1, minWidth: 0 },
   metaK: { fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: ".1em", color: C.muted },
@@ -882,4 +1006,11 @@ const S = {
   statCell: { border: `1px solid ${C.border}`, borderRadius: 4, padding: "12px 8px", textAlign: "center" },
   statV: { fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, fontSize: 22, color: C.accent },
   statL: { fontSize: 11, color: C.muted, marginTop: 4 },
+  archiveBanner: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "9px 12px", borderRadius: 4, border: `1px solid ${C.accent}`, background: "rgba(76,201,240,.07)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: C.muted },
+  archiveBackBtn: { flexShrink: 0, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.accent}`, background: "transparent", color: C.accent, fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, fontSize: 10.5, letterSpacing: ".05em", cursor: "pointer" },
+  archiveList: { display: "flex", flexDirection: "column", gap: 6, maxHeight: "60vh", overflowY: "auto" },
+  archiveRow: { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", borderRadius: 4, border: "1px solid", cursor: "pointer", textAlign: "left", color: C.ink, fontFamily: "inherit" },
+  archiveNum: { fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, fontWeight: 700, color: C.accent, flexShrink: 0, width: 34 },
+  archiveDate: { fontSize: 12.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  archiveStatus: { fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", flexShrink: 0 },
 };
