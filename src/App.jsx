@@ -656,7 +656,7 @@ export default function Engineerdle() {
         <header style={S.header}>
           <div>
             <div style={S.eyebrow}>{isToday ? "DAILY ENGINEERING PUZZLE" : "ARCHIVE PUZZLE"} · No. {puzzle.number}</div>
-            <div style={S.title}>ENGINEER·DLE</div>
+            <div style={S.title} role="button" tabIndex={0} onClick={() => openPuzzle(todayNumber)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openPuzzle(todayNumber); }}>ENGINEER·DLE</div>
           </div>
           <div style={S.iconRow}>
             <IconBtn label="Puzzle archive" onClick={() => setShowArchive(true)}><ArchiveIcon /></IconBtn>
@@ -668,7 +668,6 @@ export default function Engineerdle() {
         {!isToday && (
           <div style={S.archiveBanner}>
             <span>Viewing {shortDate(dateForDayNumber(puzzle.number))} — this play doesn't affect your streak.</span>
-            <button className="ed-btn" style={S.archiveBackBtn} onClick={() => openPuzzle(todayNumber)}>BACK TO TODAY</button>
           </div>
         )}
 
@@ -960,7 +959,7 @@ const S = {
   frame: { position: "relative", width: "100%", maxWidth: 500, display: "flex", flexDirection: "column", gap: 14 },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 },
   eyebrow: { fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: ".14em", color: C.accent },
-  title: { fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 26, marginTop: 2 },
+  title: { fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 26, marginTop: 2, cursor: "pointer" },
   iconRow: { display: "flex", gap: 6 },
   iconBtn: { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.border}`, background: "transparent", color: C.ink, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   meta: { display: "flex", gap: 16, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "8px 0" },
@@ -1007,7 +1006,6 @@ const S = {
   statV: { fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, fontSize: 22, color: C.accent },
   statL: { fontSize: 11, color: C.muted, marginTop: 4 },
   archiveBanner: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "9px 12px", borderRadius: 4, border: `1px solid ${C.accent}`, background: "rgba(76,201,240,.07)", fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: C.muted },
-  archiveBackBtn: { flexShrink: 0, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.accent}`, background: "transparent", color: C.accent, fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, fontSize: 10.5, letterSpacing: ".05em", cursor: "pointer" },
   archiveList: { display: "flex", flexDirection: "column", gap: 6, maxHeight: "60vh", overflowY: "auto" },
   archiveRow: { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", borderRadius: 4, border: "1px solid", cursor: "pointer", textAlign: "left", color: C.ink, fontFamily: "inherit" },
   archiveNum: { fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, fontWeight: 700, color: C.accent, flexShrink: 0, width: 34 },
