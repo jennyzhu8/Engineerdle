@@ -398,9 +398,10 @@ function dateKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 function dayNumber(d = new Date()) {
-  const epoch = new Date(2026, 7, 28).getTime();
-  const today = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  return Math.floor((today - epoch) / 86400000) + 1;
+  // Compare calendar dates in UTC so DST shifts (23/25-hour days) can't skew the count.
+  const epoch = Date.UTC(2026, 7, 28);
+  const today = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((today - epoch) / 86400000) + 1;
 }
 function puzzleForNumber(n) {
   const i = (((n - 1) % PUZZLES.length) + PUZZLES.length) % PUZZLES.length;
