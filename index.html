@@ -56,6 +56,37 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Static intro and links, readable without JavaScript. Styled to sit
+         under the game; the content pages themselves live in lib/site.js. -->
+    <footer class="site-intro">
+      <h1>Engineerdle: the daily engineering puzzle</h1>
+      <p>
+        Each day Engineerdle picks one engineering concept, such as a law, theory, equation, component or
+        phenomenon, from disciplines including thermodynamics, electronics, fluid mechanics, structures,
+        materials, control systems and computer science. You get one clue at a time and five attempts to
+        name it, and each wrong guess or skip reveals a more direct clue.
+      </p>
+      <p>
+        Once a puzzle's day is over, its answer, explanation and clues are added to the
+        <a href="/concepts">concept library</a>. New here? Read <a href="/how-to-play">how to play</a>.
+      </p>
+      <nav aria-label="Site">
+        <a href="/concepts">Concept library</a>
+        <a href="/how-to-play">How to play</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy policy</a>
+        <a href="/contact">Contact</a>
+      </nav>
+    </footer>
+    <style>
+      .site-intro{max-width:500px;margin:0 auto;padding:22px 16px 40px;border-top:1px solid #3E5C78;color:#7FA8C9;font:14px/1.6 'IBM Plex Sans',system-ui,sans-serif;background:#0B2A4A}
+      .site-intro h1{font:700 16px/1.3 'Space Grotesk',sans-serif;color:#EAF2FA;margin:0 0 8px}
+      .site-intro p{margin:0 0 10px}
+      .site-intro a{color:#4CC9F0}
+      .site-intro nav{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;font:12.5px 'IBM Plex Mono',monospace}
+      .site-intro nav a{color:#7FA8C9}
+    </style>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
